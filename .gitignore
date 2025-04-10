@@ -157,3 +157,12 @@ dist
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# .gitignore
+# ... autres lignes ...
+
+# Secrets and environment variables
+.env
+.env*.local
+.env*.development
+.env*.test
+.env*.production
