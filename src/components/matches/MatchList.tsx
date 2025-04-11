@@ -67,11 +67,15 @@ const MatchList: React.FC = () => {
              secondary={`${match.competition.name} - ${match.status || format(new Date(match.utcDate), 'HH:mm')}`} // Utilise competition.name et utcDate
             />
             {/* Afficher le score si disponible */}
-            {match.score && match.score.home !== null && (
-               <Typography sx={{ fontWeight: 'bold' }}>
-                 {match.score.home} - {match.score.away}
-               </Typography>
-            )}
+            // Dans src/components/matches/MatchList.tsx
+
+// Ligne 70: Vérifier l'existence de score ET fullTime ET que home n'est pas null
+         {match.score && match.score.fullTime && match.score.fullTime.home !== null && (
+             <Typography sx={{ fontWeight: 'bold' }}>
+{/* Ligne 72: Afficher les scores de fullTime */}
+              {match.score.fullTime.home} - {match.score.fullTime.away}
+             </Typography>
+         )}
           </ListItem>
         ))}
       </List>
