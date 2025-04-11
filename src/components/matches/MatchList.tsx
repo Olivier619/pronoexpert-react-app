@@ -61,7 +61,6 @@ const MatchList: React.FC = () => {
         {matches.map((match) => (
           // !! Améliorer l'affichage ici plus tard (avec MatchItem) !!
           <ListItem key={match.id} divider>
-               // Dans src/components/matches/MatchList.tsx
 
 <ListItemText
   primary={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
