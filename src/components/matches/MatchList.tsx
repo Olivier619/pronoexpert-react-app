@@ -53,9 +53,15 @@ const MatchList: React.FC = () => {
         Matchs du jour ({format(new Date(), 'dd/MM/yyyy')})
       </Typography>
       <List>
+        {/* La ligne <<<<<<< HEAD est supprimée */}
         {matches.map((matchData) => ( // Renommer la variable locale en matchData pour clarté
           // Utiliser matchData.fixture.id comme clé unique
           <ListItem key={matchData.fixture.id} divider sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5 }}>
+        {/* La ligne ======= et tout ce qui suit jusqu'à >>>>>>> sont supprimés */}
+        {/* La ligne >>>>>>> 2e99def... est supprimée */}
+
+            {/* Partie Informations Match */}
+            {/* ... reste du code ... */}
 
             {/* Partie Informations Match */}
             <Box sx={{ flexGrow: 1, mr: 2 }}>
