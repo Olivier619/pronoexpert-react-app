@@ -61,26 +61,23 @@ const MatchList: React.FC = () => {
         {matches.map((match) => (
           // !! Améliorer l'affichage ici plus tard (avec MatchItem) !!
           <ListItem key={match.id} divider>
-            <ListItemText
-              primary={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
-             // Ligne 66 dans src/components/matches/MatchList.tsx
-             secondary={`${match.competition.name} - ${match.status || format(new Date(match.utcDate), 'HH:mm')}`} // Utilise competition.name et utcDate
-            />
-            {/* Afficher le score si disponible */}
-            // Dans src/components/matches/MatchList.tsx
+               // Dans src/components/matches/MatchList.tsx
 
-// Ligne 70: Vérifier l'existence de score ET fullTime ET que home n'est pas null
-         {match.score && match.score.fullTime && match.score.fullTime.home !== null && (
-             <Typography sx={{ fontWeight: 'bold' }}>
-{/* Ligne 72: Afficher les scores de fullTime */}
-              {match.score.fullTime.home} - {match.score.fullTime.away}
-             </Typography>
-         )}
-          </ListItem>
-        ))}
-      </List>
-    </Box>
-  );
+<ListItemText
+  primary={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
+  secondary={`${match.competition.name} - ${match.status || format(new Date(match.utcDate), 'HH:mm')}`}
+/>
+{/* Condition pour afficher le score si disponible */}
+{match.score && match.score.fullTime && match.score.fullTime.home !== null && (
+  <Typography sx={{ fontWeight: 'bold', ml: 2 }}> {/* Ajout un peu de marge à gauche (ml: 2) */}
+    {match.score.fullTime.home} - {match.score.fullTime.away}
+  </Typography>
+)}
+</ListItem>
+))}
+</List>
+</Box>
+);
 };
 
 export default MatchList;
