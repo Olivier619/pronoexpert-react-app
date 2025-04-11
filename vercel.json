@@ -1,8 +1,8 @@
 {
-    "rewrites": [
-      {
-        "source": "/api/foot/:path*",
-        "destination": "https://api.football-data.org/:path*"
-      }
-    ]
-  }
+  "rewrites": [
+    {
+      "source": "/api/foot/:path*",
+            "destination": "https://v3.football.api-sports.io/:path*"
+          }
+  ]
+}
