@@ -1,0 +1,9 @@
+// vercel.json
+{
+    "rewrites": [
+      {
+        "source": "/api/foot/:path*",
+        "destination": "https://api.football-data.org/:path*"
+      }
+    ]
+  }
