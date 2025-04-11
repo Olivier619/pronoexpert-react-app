@@ -4,57 +4,52 @@ import axios, { AxiosError } from 'axios';
 
 // --- Configuration ---
 
-// Récupérer SEULEMENT la clé API des variables d'environnement Vercel
 const API_KEY = process.env.REACT_APP_API_KEY;
 
-// Vérification essentielle au démarrage de l'application
 if (!API_KEY) {
   console.error(
     "ERREUR CRITIQUE : La variable d'environnement REACT_APP_API_KEY n'est pas définie." +
     " Assurez-vous qu'elle est configurée dans les paramètres du projet Vercel."
   );
-  // Optionnel: Lancer une erreur pour bloquer le build si la clé est manquante
-  // throw new Error("Configuration API manquante : Clé API non définie.");
+} else {
+  // Log seulement une partie pour vérifier qu'elle est lue (ne pas logger la clé complète)
+  console.log(`Clé API (REACT_APP_API_KEY) lue, commence par: ${API_KEY.substring(0, 5)}...`);
 }
 
-// Créer une instance Axios préconfigurée SANS baseURL pour fonctionner avec Vercel Rewrites
 const apiClient = axios.create({
-  // PAS DE baseURL ici ! Le chemin relatif + Vercel Rewrites gèrent l'URL de destination.
+  // PAS DE baseURL ici !
   headers: {
     'Content-Type': 'application/json',
-    // Utiliser l'en-tête CORRECT pour football-data.org : 'X-Auth-Token'
-    'X-Auth-Token': API_KEY || '', // Utiliser '' si API_KEY est undefined pour éviter erreur, mais l'API retournera 401
+    'X-Auth-Token': API_KEY || '', // Utilise la clé lue
   },
   timeout: 15000, // 15 secondes timeout
 });
 
 
-// --- Interfaces TypeScript pour typer les données de l'API ---
-// Note: Ces interfaces sont basées sur la structure typique de football-data.org V4.
-// Il est TOUJOURS recommandé de vérifier la réponse réelle de l'API pour les ajuster si nécessaire.
+// --- Interfaces TypeScript (basées sur la V4 de football-data.org) ---
 
 export interface Team {
   id: number;
   name: string;
   shortName?: string;
-  tla?: string; // Three Letter Abbreviation (ex: ARS)
-  crest?: string; // URL du logo/blason
+  tla?: string;
+  crest?: string;
 }
 
 export interface League {
   id: number;
   name: string;
-  code?: string; // Ex: PL, BL1, SA
-  emblem?: string; // URL de l'emblème de la ligue
+  code?: string;
+  emblem?: string;
 }
 
 export interface ScoreTime {
-  home: number | null; // Peut être null si non disponible
+  home: number | null;
   away: number | null;
 }
 
 export interface Score {
-  winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null; // Null si match non joué/terminé
+  winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null;
   duration: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT';
   fullTime: ScoreTime;
   halfTime?: ScoreTime;
@@ -64,145 +59,144 @@ export interface Score {
 
 export interface Match {
   id: number;
-  utcDate: string; // Date/heure UTC du match au format ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)
+  utcDate: string;
   status: 'SCHEDULED' | 'LIVE' | 'IN_PLAY' | 'PAUSED' | 'FINISHED' | 'POSTPONED' | 'SUSPENDED' | 'CANCELED';
   matchday?: number;
-  stage?: string; // Ex: REGULAR_SEASON, FINAL, SEMI_FINALS
-  group?: string | null; // Ex: GROUP_A
-  lastUpdated: string; // Date de dernière mise à jour (ISO 8601)
-  competition: League; // Informations sur la ligue/compétition
+  stage?: string;
+  group?: string | null;
+  lastUpdated: string;
+  competition: League;
   homeTeam: Team;
   awayTeam: Team;
   score: Score;
-  odds?: { // Cotes, souvent limitées ou non disponibles dans le plan gratuit
-    msg: string; // Peut indiquer "Data provided by..."
+  odds?: {
+    msg: string;
     homeWin?: number;
     draw?: number;
     awayWin?: number;
   };
-  referees?: Array<{ // Arbitres, peut être un tableau vide
+  referees?: Array<{
     id: number;
     name: string;
-    type: 'REFEREE' | 'ASSISTANT_REFEREE_N1' | 'ASSISTANT_REFEREE_N2' | 'FOURTH_OFFICIAL' | 'VIDEO_ASSISTANT_REFEREE_N1' | 'VIDEO_ASSISTANT_REFEREE_N2';
+    type: string;
     nationality: string | null;
   }>;
 }
 
-// Structure de la réponse de l'API pour l'endpoint /v4/matches
 interface MatchesApiResponse {
-  count?: number; // Nombre de résultats retournés
-  filters?: Record<string, any>; // Filtres appliqués à la requête
-  matches: Match[]; // Le tableau principal des matchs
-  resultSet?: { // Informations sur le plan API utilisé
+  count?: number;
+  filters?: Record<string, any>;
+  matches: Match[];
+  resultSet?: {
       count: number;
       first: string;
       last: string;
       played: number;
   }
+  errorCode?: number;
+  message?: string;
 }
 
 
 // --- Fonctions du Service API ---
 
 /**
- * Récupère les matchs pour une date donnée en utilisant les rewrites Vercel.
- * @param date - La date au format 'YYYY-MM-DD'.
+ * Récupère les matchs (par défaut pour la période courante de l'API si pas de filtre date)
+ * en utilisant les rewrites Vercel.
+ * @param date - La date logique (utilisée pour le log), mais PAS envoyée à l'API.
  * @returns Une promesse résolue avec un tableau de matchs (Match[]).
  */
 export const getMatchesByDate = async (date: string): Promise<Match[]> => {
-  // Construit le chemin relatif qui sera intercepté par Vercel Rewrites
-  // '/api/foot/' correspond à la 'source' dans vercel.json
-  // '/v4/matches' est le chemin réel de l'endpoint sur api.football-data.org
   const requestPath = `/api/foot/v4/matches`;
 
-  console.log(`Préparation de l'appel API via Vercel Rewrites (${requestPath}) pour la date ${date}...`);
+  // Log modifié pour indiquer qu'on ne filtre pas par date dans l'appel API
+  console.log(`Début getMatchesByDate (SANS FILTRE DE DATE API) pour la date logique ${date}`);
+  console.log(`  Chemin requête prévu (via rewrite): ${requestPath}`);
+  // console.log(`  Paramètres requête: {}`); // Précision qu'on envoie un objet vide
+  console.log(`  Utilisation de l'en-tête X-Auth-Token avec la clé fournie.`);
 
   try {
+    console.log(`  Tentative d'appel Axios vers: ${requestPath} SANS paramètres de date.`);
     const response = await apiClient.get<MatchesApiResponse>(requestPath, {
-      params: {
-        // Paramètres spécifiques à l'API football-data.org pour filtrer par date
-        dateFrom: date,
-        dateTo: date,
-        // Note : L'API peut avoir des limites sur le nombre de jours/compétitions pour les plans gratuits.
-      },
-      // L'en-tête 'X-Auth-Token' est ajouté automatiquement par l'instance 'apiClient'
+      // --- >>> MODIFICATION : PAS DE FILTRE DE DATE <<< ---
+      params: {}, // Objet vide - Ne pas envoyer dateFrom/dateTo
+      // --- >>> FIN MODIFICATION <<< ---
     });
 
-    // Log succès et vérification de la structure de la réponse
+    // --- LOGS DÉTAILLÉS DE LA RÉPONSE ---
+    console.log('--- Réponse API Brute Reçue ---');
+    console.log(`  Statut HTTP: ${response.status}`);
+    console.log(`  Type de response.data: ${typeof response.data}`);
+    try {
+        console.log('  Contenu response.data:', response.data);
+    } catch (e) {
+        console.error('  Impossible de logger response.data directement, peut-être trop volumineux ou circulaire.');
+    }
+    console.log(`  Clé 'matches' présente? ${response.data && 'matches' in response.data}`);
+    if (response.data && 'matches' in response.data) {
+        console.log(`  Type de response.data.matches: ${typeof response.data.matches}`);
+        console.log(`  response.data.matches est un tableau? ${Array.isArray(response.data.matches)}`);
+        console.log(`  Nombre de matchs dans response.data.matches: ${Array.isArray(response.data.matches) ? response.data.matches.length : 'N/A'}`);
+    }
+    if (response.data?.count !== undefined) {
+        console.log(`  Valeur de response.data.count: ${response.data.count}`);
+    }
+    if (response.data?.resultSet) {
+        console.log('  Informations ResultSet API:', response.data.resultSet);
+    }
+    if (response.data?.message) {
+        console.log(`  Message API dans la réponse: ${response.data.message}`);
+    }
+    if (response.data?.errorCode) {
+        console.log(`  Code d'erreur API dans la réponse: ${response.data.errorCode}`);
+    }
+    console.log('--- Fin Réponse API Brute ---');
+    // --- FIN LOGS DÉTAILLÉS ---
+
+
+    // Vérification principale pour retourner les matchs
     if (response.data && Array.isArray(response.data.matches)) {
-      console.log(` ${response.data.matches.length} matchs reçus avec succès pour ${date}.`);
-      return response.data.matches; // Retourne le tableau de matchs
+      console.log(`  Traitement réussi: ${response.data.matches.length} matchs trouvés dans le tableau 'matches'. Retour de ce tableau.`);
+      // !!! ATTENTION: Ces matchs peuvent couvrir une période plus large que juste 'date' !!!
+      // Vous pourriez vouloir filtrer côté client si nécessaire, mais voyons d'abord ce que l'API renvoie.
+      return response.data.matches;
     } else {
-      // Si la réponse est inattendue (pas de clé 'matches' ou ce n'est pas un tableau)
-      console.warn(`Réponse API reçue pour ${date}, mais le format est inattendu. Clé 'matches' manquante ou invalide.`, response.data);
-      return []; // Retourne un tableau vide pour éviter une erreur dans le composant
+      console.warn(`  Traitement AVERTISSEMENT: Réponse API reçue (statut ${response.status}) mais structure inattendue. Clé 'matches' manquante ou non-tableau.`);
+      console.warn('  Retour d\'un tableau vide.');
+      return [];
     }
 
   } catch (error) {
-    // Log détaillé en cas d'erreur
-    console.error(`ERREUR lors de la récupération des matchs pour la date ${date} via ${requestPath}:`);
+    // Gestion d'erreur (inchangée)
+    console.error(`ERREUR CATCHÉE dans getMatchesByDate (SANS FILTRE DATE) pour la date logique ${date}:`);
     if (axios.isAxiosError(error)) {
-      // Erreur spécifique d'Axios
       const axiosError = error as AxiosError;
-      console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A (Network Error?)'}`);
-      // Essayer d'extraire et logger le message d'erreur de l'API si présent
+      console.error(`  Erreur Axios détectée.`);
+      console.error(`  Statut HTTP: ${axiosError.response?.status || 'N/A (Erreur Réseau ou CORS?)'}`);
       const apiErrorData = axiosError.response?.data as any;
       if (apiErrorData && apiErrorData.message) {
-        console.error(`  Message API: ${apiErrorData.message}`);
+        console.error(`  Message d'erreur API: ${apiErrorData.message}`);
+         if (apiErrorData.errorCode) {
+            console.error(`  Code d'erreur API: ${apiErrorData.errorCode}`);
+         }
       } else if (axiosError.message) {
         console.error(`  Message Axios: ${axiosError.message}`);
       }
-      // Log spécifique pour l'erreur 401 Unauthorized
       if (axiosError.response?.status === 401) {
-        console.error("  >>> CAUSE POSSIBLE: Problème d'authentification (401). Vérifiez que REACT_APP_API_KEY est correctement configurée sur Vercel et que l'en-tête 'X-Auth-Token' est envoyé.");
-      }
-      // Log spécifique pour l'erreur 403 Forbidden / 429 Too Many Requests (limites du plan API)
-       else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) {
-         console.error(`  >>> CAUSE POSSIBLE: Limites du plan API atteintes (${axiosError.response?.status}) ou accès refusé. Vérifiez votre plan sur football-data.org.`);
+        console.error("  >>> PISTE: Problème d'authentification (401). Vérifiez REACT_APP_API_KEY sur Vercel et l'en-tête 'X-Auth-Token'.");
+      } else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) {
+         console.error(`  >>> PISTE: Limites du plan API (${axiosError.response?.status}). Vérifiez votre compte/plan sur football-data.org ou les filtres de la requête.`);
+       } else if (!axiosError.response) {
+         console.error("  >>> PISTE: Pas de réponse reçue. Problème réseau, mauvaise configuration des Rewrites Vercel, ou problème CORS si les rewrites ne fonctionnent pas.");
        }
     } else {
-      // Erreur générique (ex: erreur dans le code, problème réseau imprévu)
       console.error('  Erreur inattendue (non-Axios):', error);
     }
-    // Relancer l'erreur pour que le composant React puisse la gérer (ex: afficher un message à l'utilisateur)
     throw error;
   }
 };
+
 
 // --- TODO: Ajouter les autres fonctions du service ici ---
-
-/*
-export const getTeamHistoryAndStats = async (teamId: number): Promise<any> => { // Remplacer 'any' par une interface spécifique
-  const requestPath = `/api/foot/v4/teams/${teamId}/matches`; // Exemple, vérifier l'endpoint réel
-  try {
-    const response = await apiClient.get(requestPath, {
-        params: { limit: 15, status: 'FINISHED' } // Exemple de paramètres
-    });
-    // ... Traiter la réponse ...
-    return response.data; // Adapter selon la structure réelle
-  } catch (error) {
-    console.error(`Erreur lors de la récupération de l'historique pour l'équipe ${teamId}:`, error);
-    throw error;
-  }
-};
-*/
-
-/*
-export const searchTeams = async (query: string): Promise<Team[]> => {
-  // Note: La recherche d'équipe n'est peut-être pas disponible ou nécessite un endpoint différent
-  // Vérifier la documentation de football-data.org
-  const requestPath = `/api/foot/v4/teams`; // Endpoint hypothétique
-  try {
-      const response = await apiClient.get<{ teams: Team[] }>(requestPath, { // Supposant une structure { teams: [] }
-          params: { name: query } // Paramètre hypothétique
-      });
-      return response.data.teams || [];
-  } catch (error) {
-      console.error(`Erreur lors de la recherche de l'équipe "${query}":`, error);
-      throw error;
-  }
-};
-*/
-
-// Note : Il n'est généralement pas nécessaire d'exporter 'apiClient' directement.
-// Les fonctions comme getMatchesByDate encapsulent son utilisation.
+// export const getTeamHistoryAndStats = async (teamId: number): Promise<any> => { ... }
+// export const searchTeams = async (query: string): Promise<Team[]> => { ... }
