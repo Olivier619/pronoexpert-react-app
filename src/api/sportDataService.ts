@@ -206,49 +206,6 @@ interface MatchesApiResponse {
  * @param date - La date au format 'YYYY-MM-DD'.
  * @returns Une promesse résolue avec un tableau de matchs.
  */
-export const getMatchesByDate = async (date: string): Promise<Match[]> => {
-  try {
-    console.log(`Appel API pour les matchs du ${date}...`);
-    // Adaptez le chemin '/fixtures' et les paramètres ('date', 'league', 'season') selon votre API
-    const response = await apiClient.get<MatchesApiResponse>('/fixtures', {
-      params: {
-        date: date,
-        // Ajoutez d'autres paramètres si nécessaire (ex: league, season)
-        // league: '39', // Exemple: Premier League
-        // season: '2023', // Exemple: Saison
-        // Si votre API prend la clé en paramètre (moins courant/sécurisé) :
-        // apiKey: API_KEY
-      },
-      // Si votre clé doit être dans l'en-tête spécifique à cette requête :
-      // headers: { 'X-ApiSports-Key': API_KEY }
-    });
-
-    // !! ADAPTEZ L'EXTRACTION DES DONNÉES !!
-    // Vérifiez la structure de 'response.data' et retournez le tableau de matchs.
-    if (response.data && Array.isArray(response.data.response)) {
-       console.log(` ${response.data.response.length} matchs reçus.`);
-      return response.data.response; // Extrait les matchs de la clé 'response'
-    } else {
-      // Si l'API retourne directement un tableau : return response.data;
-      console.error("Format de réponse API inattendu:", response.data);
-      return []; // Retourne un tableau vide en cas de format inconnu
-    }
-
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      // Erreur spécifique d'Axios (réseau, timeout, code statut HTTP != 2xx)
-      console.error('Erreur Axios lors de la récupération des matchs:', error.response?.status, error.message);
-      // Vous pourriez vouloir inspecter error.response?.data pour plus de détails de l'API
-    } else {
-      // Erreur générique
-      console.error('Erreur inattendue lors de la récupération des matchs:', error);
-    }
-    // Relancer l'erreur pour la gestion dans le composant, ou retourner un tableau vide
-    throw error; // Permet au composant de savoir qu'il y a eu une erreur
-    // return []; // Alternative: ne pas bloquer l'UI mais afficher "aucun match"
-  }
-};
-
 // --- TODO: Ajouter les autres fonctions du service ---
 // export const getTeamHistoryAndStats = async (teamId: string | number): Promise<any> => { ... }
 // export const searchTeams = async (query: string): Promise<Team[]> => { ... }
