@@ -63,7 +63,8 @@ const MatchList: React.FC = () => {
           <ListItem key={match.id} divider>
             <ListItemText
               primary={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
-              secondary={`${match.league.name} - ${match.status || format(new Date(match.date), 'HH:mm')}`} // Affiche le statut ou l'heure
+             // Ligne 66 dans src/components/matches/MatchList.tsx
+             secondary={`${match.competition.name} - ${match.status || format(new Date(match.utcDate), 'HH:mm')}`} // Utilise competition.name et utcDate
             />
             {/* Afficher le score si disponible */}
             {match.score && match.score.home !== null && (
