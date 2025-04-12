@@ -97,9 +97,11 @@ const MatchList: React.FC = () => {
  return (
    <>
      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+     <>
        {getTitleForPeriod()}
        {selectedLeagueName && ( <span style={{ fontWeight: 'normal', marginLeft: '8px' }}> - {selectedLeagueName}</span> )}
        {loading && <CircularProgress size={20} sx={{ ml: 2 }} />}
+       </>
      </Typography>
 
      {error && !loading && ( <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> )}
