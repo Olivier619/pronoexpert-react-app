@@ -51,9 +51,14 @@ const MatchItem: React.FC<MatchItemProps> = ({ matchData }) => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
              {league.logo && <Avatar src={league.logo} alt={league.name} sx={{ width: 20, height: 20, mr: 1 }} />}
-            <Typography variant="caption" color="text.secondary">
-              {league.name} - {league.country} {league.round && `- ${league.round}`}
-            </Typography>
+             // Dans src/components/matches/MatchItem.tsx
+
+<Typography variant="caption" color="text.secondary">
+  {/* --- >>> MODIFICATION ICI <<< --- */}
+  {/* Combinez tout en une seule chaîne avec des template literals */}
+  {`${league.name} - ${league.country?.name ?? 'N/A'} ${league.round ? `- ${league.round}` : ''}`}
+  {/* --- >>> FIN MODIFICATION <<< --- */}
+</Typography>
           </Box>
           <Chip
             label={fixture.status.short === 'NS' ? format(parseISO(fixture.date), 'HH:mm') : fixture.status.long}
