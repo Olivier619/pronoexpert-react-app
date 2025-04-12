@@ -38,7 +38,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         >
           <Tab label="Aujourd'hui" value="today" />
           <Tab label="Demain" value="tomorrow" />
-          <Tab label="Après-demain" value="after-tomorrow" />
           <Tab label="Derniers Matchs" value="yesterday" />
           {/* On pourrait ajouter d'autres périodes ici */}
         </Tabs>

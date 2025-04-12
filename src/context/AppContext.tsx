@@ -1,9 +1,10 @@
 // src/context/AppContext.tsx
-import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useMemo, useEffect } from 'react'; // Ajout de useEffect
 import { format, addDays, subDays } from 'date-fns';
 
 // Définir les types de périodes possibles
-export type PeriodType = 'today' | 'tomorrow' | 'after-tomorrow' | 'yesterday';
+// J'enlève 'after-tomorrow' comme demandé
+export type PeriodType = 'today' | 'tomorrow' | 'yesterday';
 
 // Définir la structure du contexte
 interface AppContextProps {
@@ -21,31 +22,54 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
+  // Utiliser 'setSelectedPeriodState' pour l'état interne
+  const [selectedPeriod, setSelectedPeriodState] = useState<PeriodType>('today');
+
+  // --- AJOUT : Fonction wrapper pour logger le changement de période ---
+  const setSelectedPeriod = (period: PeriodType) => {
+      console.log(`[AppContext] setSelectedPeriod appelé avec: ${period}`); // <-- LOG AJOUTÉ
+      setSelectedPeriodState(period); // Met à jour l'état réel
+  };
+  // --- FIN AJOUT ---
 
   // Calculer la date correspondante en fonction de la période sélectionnée
   const selectedDate = useMemo(() => {
     const today = new Date();
+    let newDate: string;
     switch (selectedPeriod) {
       case 'today':
-        return format(today, 'yyyy-MM-dd');
+        newDate = format(today, 'yyyy-MM-dd');
+        break;
       case 'tomorrow':
-        return format(addDays(today, 1), 'yyyy-MM-dd');
-      case 'after-tomorrow':
-        return format(addDays(today, 2), 'yyyy-MM-dd');
+        newDate = format(addDays(today, 1), 'yyyy-MM-dd');
+        break;
+      // case 'after-tomorrow': // Supprimé comme demandé
+      //   newDate = format(addDays(today, 2), 'yyyy-MM-dd');
+      //   break;
       case 'yesterday': // Pour "Derniers matchs joués"
-        return format(subDays(today, 1), 'yyyy-MM-dd');
+        newDate = format(subDays(today, 1), 'yyyy-MM-dd');
+        break;
       default:
-        return format(today, 'yyyy-MM-dd');
+        newDate = format(today, 'yyyy-MM-dd');
     }
+    // Logguer la date calculée DANS le useMemo pour voir si le calcul se fait
+    // console.log(`[AppContext] useMemo a calculé selectedDate: ${newDate} pour period: ${selectedPeriod}`);
+    return newDate;
   }, [selectedPeriod]); // Recalculer seulement si selectedPeriod change
 
-  // Valeur à fournir au contexte
+  // --- AJOUT : useEffect pour logger quand selectedDate change réellement ---
+  useEffect(() => {
+      console.log(`[AppContext] La valeur de selectedDate a changé ou est initialisée: ${selectedDate}`); // <-- LOG AJOUTÉ
+  }, [selectedDate]);
+  // --- FIN AJOUT ---
+
+
+  // Valeur à fournir au contexte (utilise la fonction setSelectedPeriod wrapper)
   const contextValue = useMemo(() => ({
     selectedPeriod,
-    setSelectedPeriod,
+    setSelectedPeriod, // Passe la fonction wrapper avec log
     selectedDate,
-  }), [selectedPeriod, selectedDate]);
+  }), [selectedPeriod, selectedDate]); // dépendances correctes
 
   return (
     <AppContext.Provider value={contextValue}>
