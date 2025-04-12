@@ -17,14 +17,21 @@ export interface FixtureStatus { long: string; short: string; elapsed: number | 
 export interface Fixture { id: number; referee: string | null; timezone: string; date: string; timestamp: number; periods: { first: number | null; second: number | null; }; venue: { id: number | null; name: string | null; city: string | null; }; status: FixtureStatus; }
 
 // MODIFIER LeagueInfo pour inclure la saison actuelle (si retournée par /leagues)
-export interface LeagueInfo {
+e// src/api/sportDataService.ts
+
+export interface LeagueInfo { // Renommé
   id: number;
   name: string;
   type?: string; // Ex: 'League', 'Cup'
   logo: string;
   country?: CountryInfo; // Inclure les infos du pays si retourné par /leagues
   season?: LeagueSeason; // Informations sur la saison actuelle si retourné par /leagues
+  // --- >>> AJOUTER CETTE LIGNE <<< ---
+  round?: string; // Ex: "Regular Season - 15", "Final" (Rendre optionnel car pas toujours présent)
+  // --- >>> FIN AJOUT <<< ---
 }
+
+// ... (reste du fichier) ...
 
 // NOUVELLE Interface pour les infos de pays (si retourné par /leagues)
 export interface CountryInfo {
