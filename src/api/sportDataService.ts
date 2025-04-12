@@ -17,7 +17,7 @@ export interface FixtureStatus { long: string; short: string; elapsed: number | 
 export interface Fixture { id: number; referee: string | null; timezone: string; date: string; timestamp: number; periods: { first: number | null; second: number | null; }; venue: { id: number | null; name: string | null; city: string | null; }; status: FixtureStatus; }
 
 // MODIFIER LeagueInfo pour inclure la saison actuelle (si retournée par /leagues)
-e// src/api/sportDataService.ts
+// src/api/sportDataService.ts
 
 export interface LeagueInfo { // Renommé
   id: number;
