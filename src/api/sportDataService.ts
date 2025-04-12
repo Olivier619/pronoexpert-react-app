@@ -147,9 +147,34 @@ export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => {
       }
   } catch (error) {
       console.error(`[Service] ERREUR lors de la récupération des ligues via ${requestPath}:`, error);
-       if (axios.isAxiosError(error)) {
-           // ... (log détaillé de l'erreur axios) ...
-       } else { console.error('  Erreur inattendue:', error); }
+       // DANS LE BLOC catch -> if (axios.isAxiosError(error))
+
+       const axiosError = error as AxiosError;
+       console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A'}`);
+       const apiErrorData = axiosError.response?.data as any;
+
+       // --- >>> MODIFICATION ICI <<< ---
+       // Vérifier d'abord si apiErrorData existe ET a une propriété 'message' de type string
+       if (apiErrorData && typeof apiErrorData.message === 'string') {
+           console.error(`  Message API: ${apiErrorData.message}`);
+       }
+       // Vérifier ensuite si apiErrorData existe ET a une propriété 'errors' qui est un tableau
+       else if (apiErrorData && Array.isArray(apiErrorData.errors)) {
+           console.error('  Erreurs API:', apiErrorData.errors);
+       }
+       // Enfin, vérifier le message d'erreur Axios général
+       else if (axiosError.message) {
+           console.error(`  Message Axios: ${axiosError.message}`);
+       }
+       // --- >>> FIN MODIFICATION <<< ---
+
+       // Log spécifiques pour erreurs communes (inchangé)
+       if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { /* ... */ }
+       else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) { /* ... */ }
+       else if (!axiosError.response) { /* ... */ }
+
+   } else { console.error('  Erreur inattendue:', error); }
+  // ... reste du catch ...
       // En cas d'erreur, on peut choisir de relancer ou retourner un tableau vide
       // throw error; // Option 1: Propager l'erreur
       return []; // Option 2: Retourner un tableau vide pour ne pas bloquer l'UI du filtre
