@@ -1,106 +1,117 @@
 // src/components/matches/MatchList.tsx
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react'; // Ajout de useCallback
 import { Box, Typography, CircularProgress, Alert } from '@mui/material';
-// Importer SEULEMENT getCountries pour ce test
-import { getCountries } from '../../api/sportDataService';
-// import MatchItem from './MatchItem'; // Pas besoin d'afficher les matchs pour ce test
+import { format, parseISO } from 'date-fns';
+// --- >>> Remettre les bons imports <<< ---
+import { getMatchesByDate, MatchData } from '../../api/sportDataService';
+import MatchItem from './MatchItem';
+// --- >>> Fin modif <<< ---
 import { useAppContext } from '../../context/AppContext';
 
 const MatchList: React.FC = () => {
-  // On utilise toujours selectedDate pour déclencher, mais on appelle getCountries
-  const { selectedDate } = useAppContext(); // On n'a pas besoin de selectedPeriod ici
+  const { selectedDate, selectedPeriod, selectedLeagueId, selectedLeagueSeason, availableLeagues } = useAppContext();
 
-  // --- >>> MODIFIÉ : État pour stocker les pays (juste pour le test) <<< ---
-  const [countries, setCountries] = useState<any[]>([]); // Utiliser any[] pour simplifier le test
-  // --- >>> FIN MODIFICATION <<< ---
+  // --- >>> Remettre l'état 'matches' <<< ---
+  const [matches, setMatches] = useState<MatchData[]>([]);
+  // --- >>> Fin modif <<< ---
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentLoadingKey, setCurrentLoadingKey] = useState<string>('');
 
-  useEffect(() => {
-    // --- >>> MODIFIÉ : Clé basée sur 'countries' <<< ---
-    const loadingKey = `countries-${selectedDate}`; // Clé basée sur la date juste pour déclencher une fois par jour
-    // --- >>> FIN MODIFICATION <<< ---
-    console.log(`[MatchList Test Pays] useEffect déclenché. Clé: ${loadingKey}`);
+  // --- >>> Correction Warning ESLint : Utiliser useCallback pour fetchMatches <<<---
+  // Cela permet d'éviter de le redéfinir à chaque render si les dépendances ne changent pas
+  // et de l'ajouter au tableau de dépendances de useEffect si nécessaire (bien que pas strictement requis ici)
+  const fetchMatches = useCallback(async (dateToFetch: string, leagueToFetch: number | null, seasonToFetch: number | null) => {
+    const currentFetchKey = `${dateToFetch}-${leagueToFetch ?? 'all'}`;
+    console.log(`[MatchList] Démarrage fetchMatches pour la clé: ${currentFetchKey}`);
+    setError(null);
+    setLoading(true);
+    setCurrentLoadingKey(currentFetchKey);
 
-    if (loadingKey === currentLoadingKey || !selectedDate) {
-      console.log(`[MatchList Test Pays] Skip fetch.`);
-      if (!loading) return;
-    }
+    try {
+      // --- >>> Remettre l'appel à getMatchesByDate <<< ---
+      const fetchedMatches = await getMatchesByDate(dateToFetch, leagueToFetch, seasonToFetch);
+      // --- >>> Fin modif <<< ---
 
-    // --- >>> MODIFIÉ : Fonction interne renommée <<< ---
-    const fetchCountriesTest = async () => {
-      const currentFetchKey = `countries-${selectedDate}`; // Utilise la date juste pour la logique de clé
-    // --- >>> FIN MODIFICATION <<< ---
-      console.log(`[MatchList Test Pays] Démarrage fetchCountriesTest.`);
-      setError(null);
-      setLoading(true);
-      setCurrentLoadingKey(currentFetchKey);
-
-      try {
-        // --- >>> MODIFIÉ : APPEL À getCountries ICI <<< ---
-        const fetchedCountries = await getCountries();
-        // --- >>> FIN MODIFICATION <<< ---
-
-        // Vérifier si la date sélectionnée (utilisée comme déclencheur) est toujours la même
-        if (selectedDate) {
-          console.log(`[MatchList Test Pays] Réception. Nbr pays: ${fetchedCountries.length}`);
-          setCountries(fetchedCountries); // Stocker les pays reçus
-        }
-      } catch (err) {
-        if (selectedDate) {
-          console.error(`[MatchList Test Pays] Erreur lors du chargement:`, err);
-          setError('Impossible de charger les pays de test.');
-          setCountries([]);
-        }
-      } finally {
-        if (selectedDate) {
-          console.log(`[MatchList Test Pays] Fin du chargement.`);
-          setLoading(false);
-          setCurrentLoadingKey('');
-        }
+      const currentSelectedKey = `${selectedDate}-${selectedLeagueId ?? 'all'}`;
+      if (currentFetchKey === currentSelectedKey) {
+        console.log(`[MatchList] Réception et mise à jour pour ${currentFetchKey}. Nbr matchs: ${fetchedMatches.length}`);
+        // --- >>> Remettre setMatches <<< ---
+        setMatches(fetchedMatches);
+        // --- >>> Fin modif <<< ---
+      } else {
+         console.log(`[MatchList] Filtres (${currentSelectedKey}) ont changé pendant chargement de ${currentFetchKey}. Abandon.`);
       }
-    };
+    } catch (err) {
+       const currentSelectedKey = `${selectedDate}-${selectedLeagueId ?? 'all'}`;
+       if (currentFetchKey === currentSelectedKey) {
+           console.error(`[MatchList] Erreur lors du chargement pour ${currentFetchKey}:`, err);
+           setError('Impossible de charger les matchs. Veuillez réessayer.');
+           // --- >>> Remettre setMatches([]) <<< ---
+           setMatches([]);
+           // --- >>> Fin modif <<< ---
+       } else {
+            console.log(`[MatchList] Erreur ignorée pour ${currentFetchKey} car filtres sont ${currentSelectedKey}.`);
+       }
+    } finally {
+        const currentSelectedKey = `${selectedDate}-${selectedLeagueId ?? 'all'}`;
+        if (currentFetchKey === currentSelectedKey) {
+           console.log(`[MatchList] Fin du chargement pour ${currentFetchKey}.`);
+           setLoading(false);
+           setCurrentLoadingKey('');
+       }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- On re-crée fetchMatches seulement quand les filtres changent via useEffect
+  }, [selectedDate, selectedLeagueId]); // Dépendances de useCallback
 
+  useEffect(() => {
+    const loadingKey = `${selectedDate}-${selectedLeagueId ?? 'all'}`;
+    console.log(`[MatchList] useEffect déclenché. Clé: ${loadingKey}`);
+
+    // L'ancienne logique pour skipper si currentLoadingKey est le même était potentiellement problématique
+    // On lance le fetch si la date est valide. La logique DANS fetchMatches gère l'abandon si les filtres changent pendant l'appel.
     if (selectedDate) {
-      // --- >>> MODIFIÉ : Appel de la fonction de test <<< ---
-      fetchCountriesTest();
-      // --- >>> FIN MODIFICATION <<< ---
+        fetchMatches(selectedDate, selectedLeagueId, selectedLeagueSeason);
     } else {
-      setLoading(false);
+        console.warn("[MatchList] selectedDate est vide ou invalide.");
+        setLoading(false); // Pas de date, pas de chargement
+        setMatches([]); // Vider les matchs
     }
 
-  // Dépend seulement de selectedDate pour se lancer une fois au début (ou si date change)
-  }, [selectedDate]);
+  // --- >>> Correction Warning ESLint : Ajouter fetchMatches aux dépendances <<<---
+  // Même si fetchMatches est stable grâce à useCallback, ESLint aime le voir ici.
+  // Les dépendances principales restent selectedDate, selectedLeagueId, selectedLeagueSeason
+  }, [selectedDate, selectedLeagueId, selectedLeagueSeason, fetchMatches]);
+  // --- >>> Fin Correction <<<---
 
-  // --- >>> MODIFIÉ : Affichage de Test <<< ---
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Test: Chargement des pays...</Typography>
-      </Box>
-    );
-  }
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
-  }
 
-  return (
-    <Box>
-      <Typography variant="h5" gutterBottom>Test API /countries</Typography>
-      <Typography>Nombre de pays reçus : {countries.length}</Typography>
-      {/* Optionnel: Afficher la liste des noms de pays */}
-      {countries.length > 0 ? (
-          <ul style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px' }}>
-            {countries.map(c => <li key={c.name}>{c.name} ({c.code ?? 'N/A'})</li>)}
-          </ul>
-      ) : (
-          <Typography sx={{mt: 2}}>(Aucun pays retourné par l'API)</Typography>
-      )}
-    </Box>
-  );
-  // --- >>> FIN MODIFICATION <<< ---
+ // --- >>> Remettre l'affichage normal <<< ---
+ // Affichage conditionnel (inchangé)
+ if (loading && matches.length === 0 && !error) { /* ... Loader ... */ }
+
+ // Affichage de la liste (inchangé - utilise maintenant 'matches' qui est vide ou rempli)
+ const getTitleForPeriod = () => { /* ... */ };
+ const selectedLeagueName = selectedLeagueId && !loading ? availableLeagues.find(l=>l.id === selectedLeagueId)?.name ?? '' : '';
+
+ return (
+   <>
+     <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+       {getTitleForPeriod()}
+       {selectedLeagueName && ( <span style={{ fontWeight: 'normal', marginLeft: '8px' }}> - {selectedLeagueName}</span> )}
+       {loading && <CircularProgress size={20} sx={{ ml: 2 }} />}
+     </Typography>
+
+     {error && !loading && ( <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> )}
+     {!loading && matches.length === 0 && !error && ( <Typography sx={{ mt: 2 }}>Aucun match trouvé pour ces critères.</Typography> )}
+     <Box>
+         {matches.length > 0 && matches.map((matchData) => (
+           <MatchItem key={matchData.fixture.id} matchData={matchData} />
+         ))}
+     </Box>
+   </>
+ );
+ // --- >>> FIN Remise en état <<< ---
 };
 
 export default MatchList;

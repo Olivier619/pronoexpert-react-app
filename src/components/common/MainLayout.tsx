@@ -1,9 +1,11 @@
 // src/components/common/MainLayout.tsx
 import React, { ReactNode } from 'react';
+// --- >>> Vérifier que Tab est bien dans cet import <<< ---
 import {
-    AppBar, Toolbar, Typography, Container, Box, Tabs, Tab,
-    Select, MenuItem, FormControl, InputLabel, CircularProgress, SelectChangeEvent // Ajouts pour Select
+    AppBar, Toolbar, Typography, Container, Box, Tabs, Tab, // 'Tab' est nécessaire ici
+    Select, MenuItem, FormControl, InputLabel, CircularProgress, SelectChangeEvent
 } from '@mui/material';
+// --- >>> Fin Vérification <<<---
 import { useAppContext, PeriodType } from '../../context/AppContext';
 
 interface MainLayoutProps {
@@ -11,7 +13,6 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  // Récupérer les états/setters du contexte, y compris pour les ligues
   const {
       selectedPeriod, setSelectedPeriod,
       availableLeagues, leaguesLoading, selectedLeagueId, setSelectedLeagueId
@@ -21,10 +22,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setSelectedPeriod(newValue);
   };
 
-  // Gérer le changement de ligue sélectionnée
   const handleLeagueChange = (event: SelectChangeEvent<number | string>) => {
       const value = event.target.value;
-      // Convertir en nombre si ce n'est pas "all", sinon null
       const leagueId = value === "all" ? null : Number(value);
       setSelectedLeagueId(leagueId);
   };
@@ -36,36 +35,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             PronoExpert
           </Typography>
-           {/* --- AJOUT: Filtre Compétition --- */}
+            {/* Filtre Compétition */}
             <FormControl sx={{ m: 1, minWidth: 200, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1 }} size="small">
               <InputLabel id="league-select-label" sx={{ color: 'white' }}>Compétition</InputLabel>
               <Select
                 labelId="league-select-label"
                 id="league-select"
-                value={selectedLeagueId === null ? 'all' : selectedLeagueId} // Utiliser 'all' pour la valeur null
+                value={selectedLeagueId === null ? 'all' : selectedLeagueId}
                 label="Compétition"
                 onChange={handleLeagueChange}
-                disabled={leaguesLoading} // Désactiver pendant le chargement
+                disabled={leaguesLoading}
                 sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.3)' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.5)' }, '.MuiSvgIcon-root': { color: 'white' } }}
-                MenuProps={{ // Style du menu déroulant
-                    PaperProps: {
-                        sx: { maxHeight: 400 } // Limite la hauteur
-                    }
-                }}
+                MenuProps={{ PaperProps: { sx: { maxHeight: 400 } } }}
               >
-                {/* Option "Toutes" */}
                 <MenuItem value="all">
                   <em>Toutes les compétitions</em>
                 </MenuItem>
-                {/* Options pour chaque ligue disponible */}
                 {leaguesLoading ? (
                   <MenuItem disabled value="loading">
                     <CircularProgress size={20} sx={{ mr: 1 }}/> Chargement...
                   </MenuItem>
                 ) : (
-                  availableLeagues
-                    // Optionnel: Trier les ligues par pays puis par nom
-                    .sort((a, b) => (a.country?.name ?? '').localeCompare(b.country?.name ?? '') || a.name.localeCompare(b.name))
+                  availableLeagues // La liste est déjà triée dans le contexte maintenant
                     .map((league) => (
                       <MenuItem key={league.id} value={league.id}>
                         <img src={league.logo} alt="" width="16" height="16" style={{ marginRight: '8px', verticalAlign: 'middle' }} />
@@ -75,14 +66,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 )}
               </Select>
             </FormControl>
-           {/* --- FIN AJOUT Filtre --- */}
         </Toolbar>
+        {/* Barre d'onglets */}
         <Tabs
           value={selectedPeriod}
           onChange={handleTabChange}
-          // ... (props des Tabs inchangées) ...
+          indicatorColor="secondary"
+          textColor="inherit"
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label="Navigation par période"
+          sx={{ bgcolor: 'primary.main' }}
         >
-           {/* ... (Tabs inchangées) ... */}
+          {/* --- >>> Utilisation de Tab ici <<< --- */}
+          <Tab label="Aujourd'hui" value="today" />
+          <Tab label="Demain" value="tomorrow" />
+          <Tab label="Derniers Matchs" value="yesterday" />
+          {/* --- >>> Fin Utilisation <<< --- */}
         </Tabs>
       </AppBar>
 
@@ -90,8 +90,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {children}
       </Container>
 
-      <Box component="footer" /* ... etc ... */ >
-         {/* ... contenu du footer ... */}
+      <Box component="footer" sx={{ py: 2, px: 2, mt: 'auto', backgroundColor: (theme) => theme.palette.mode === 'light' ? theme.palette.grey[200] : theme.palette.grey[800], }} >
+          <Container maxWidth="sm">
+            <Typography variant="body2" color="text.secondary" align="center">
+              {'Copyright © '} PronoExpert {new Date().getFullYear()}{'.'}
+            </Typography>
+          </Container>
       </Box>
     </Box>
   );
