@@ -13,8 +13,7 @@ if (!API_KEY) {
     " Assurez-vous qu'elle est configurée dans les paramètres du projet Vercel."
   );
 } else {
-  // Log seulement une partie pour vérifier qu'elle est lue (ne pas logger la clé complète)
-  console.log(`Clé API (REACT_APP_API_SPORTS_KEY) lue, commence par: ${API_KEY.substring(0, 5)}...`);
+   // console.log(`Clé API (REACT_APP_API_SPORTS_KEY) lue, commence par: ${API_KEY.substring(0, 5)}...`); // Commenté pour éviter erreur ESLint potentielle
 }
 
 const apiClient = axios.create({
@@ -40,152 +39,175 @@ export interface Fixture { id: number; referee: string | null; timezone: string;
 export interface MatchData { fixture: Fixture; league: LeagueInfo; teams: { home: TeamInfo; away: TeamInfo; }; goals: Goals; score: ScoreInfo; events?: any[]; lineups?: any[]; statistics?: any[]; }
 
 interface FixturesApiResponse {
-  get?: string; parameters?: Record<string, any>; errors?: any[]; results?: number; paging?: { current: number; total: number; }; response: MatchData[]; errorCode?: number; message?: string;
+  get?: string; parameters?: Record<string, any>; errors?: any[] | Record<string, string>; results?: number; paging?: { current: number; total: number; }; response: MatchData[]; errorCode?: number; message?: string;
 }
-
-// --- >>> NOUVELLE Interface pour la réponse de /countries <<< ---
+interface LeaguesApiResponse {
+    get?: string; parameters?: Record<string, any>; errors?: any[] | Record<string, string>; results?: number; paging?: { current: number; total: number; }; response: Array<{ league: LeagueInfo; country: CountryInfo; seasons: LeagueSeason[]; }>; errorCode?: number; message?: string;
+}
 interface CountriesApiResponse {
-    get?: string;
-    parameters?: any[];
-    errors?: any[];
-    results?: number;
-    response: Array<{ // Tableau d'objets pays
-        name: string;
-        code: string | null; // Ex: GB, FR, null
-        flag: string | null;
-    }>;
-    errorCode?: number;
-    message?: string;
+    get?: string; parameters?: any[]; errors?: any[] | Record<string, string>; results?: number; response: Array<{ name: string; code: string | null; flag: string | null; }>; errorCode?: number; message?: string;
 }
-// --- >>> FIN NOUVELLE Interface <<< ---
-
-
 
 // --- Fonctions du Service API ---
 
-/**                                           ***
- * NOUVELLE Fonction pour tester l'endpoint /countries
- * Récupère la liste des pays couverts par l'API.
- * @returns Une promesse résolue avec un tableau de pays.
+/**
+ * Test: Récupère la liste des pays.
  */
 export const getCountries = async (): Promise<Array<{ name: string; code: string | null; flag: string | null }>> => {
-    const requestPath = '/api/foot/countries'; // Utilise le rewrite Vercel + endpoint /countries
+    const requestPath = '/api/foot/countries';
     console.log(`[Service] Appel TEST getCountries vers ${requestPath}`);
     try {
         const response = await apiClient.get<CountriesApiResponse>(requestPath);
-
         console.log('--- Réponse API /countries Reçue ---');
         console.log(`  Statut HTTP: ${response.status}`);
         console.log(`  Résultats API: ${response.data?.results ?? 'N/A'}`);
-         try {
-             console.log('  Contenu response.data:', response.data);
-         } catch (e) { console.error('  Impossible de logger response.data'); }
-        console.log(`  Nombre de pays dans response.data.response: ${Array.isArray(response.data?.response) ? response.data.response.length : 'N/A'}`);
+        try { console.log('  Contenu response.data:', response.data); } catch (e) { console.error('Impossible logger response.data'); }
+        console.log(`  Nombre de pays: ${Array.isArray(response.data?.response) ? response.data.response.length : 'N/A'}`);
         console.log('--- Fin Réponse API /countries ---');
-
 
         if (response.data && Array.isArray(response.data.response)) {
             console.log(`  Traitement réussi: ${response.data.response.length} pays retournés.`);
             return response.data.response;
         } else {
             console.warn('[Service] Réponse API pour /countries inattendue.');
-             if(response.data?.errors && response.data.errors.length > 0) { console.error('  Erreurs API:', response.data.errors); }
-             if(response.data?.message) { console.error('  Message API:', response.data.message); }
+            if (response.data?.errors && (Array.isArray(response.data.errors) || typeof response.data.errors === 'object')) { console.error('  Erreurs API:', response.data.errors); }
+            if (response.data?.message) { console.error('  Message API:', response.data.message); }
             return [];
         }
     } catch (error) {
         console.error(`[Service] ERREUR lors de la récupération des pays via ${requestPath}:`, error);
-         if (axios.isAxiosError(error)) {
-             const axiosError = error as AxiosError;
-             console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A'}`);
-             const apiErrorData = axiosError.response?.data as any;
-             if (apiErrorData?.message) { console.error(`  Message API: ${apiErrorData.message}`); }
-             else if (apiErrorData?.errors) { console.error('  Erreurs API:', apiErrorData.errors); }
-             else if (axiosError.message) { console.error(`  Message Axios: ${axiosError.message}`); }
-             if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) {
-                 console.error("  >>> PISTE AUTH: Vérif clé REACT_APP_API_SPORTS_KEY sur Vercel.");
-             }
-         } else { console.error('  Erreur inattendue:', error); }
+        if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A'}`);
+            const apiErrorData = axiosError.response?.data as any;
+            // --- >>> Correction Syntaxe ESLint <<< ---
+            if (apiErrorData && typeof apiErrorData.message === 'string') {
+                 console.error(`  Message API: ${apiErrorData.message}`);
+                 if (apiErrorData.errorCode) { console.error(`  Code d'erreur API: ${apiErrorData.errorCode}`); }
+                 else if (apiErrorData.errors && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) { console.error('  Erreurs API:', apiErrorData.errors); } // Vérifie aussi errors ici
+             } else if (apiErrorData && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) { // Vérifie errors si pas de message
+                 console.error('  Erreurs API:', apiErrorData.errors);
+            } else if (axiosError.message) {
+                 console.error(`  Message Axios: ${axiosError.message}`);
+            }
+            // --- >>> FIN CORRECTION <<< ---
+             if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { console.error("  >>> PISTE AUTH: Vérif clé REACT_APP_API_SPORTS_KEY sur Vercel."); }
+        } else { console.error('  Erreur inattendue:', error); }
         throw error;
     }
 }
-// --- >>> FIN NOUVELLE Fonction <<< ---
 
-
-
-// Fonction pour récupérer les ligues (INCHANGÉE)
-// Dans src/api/sportDataService.ts, remplacer le corps de getAvailableLeagues
-
-// Fonction pour récupérer les ligues
+/**
+ * Récupère la liste des ligues disponibles.
+ */
 export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => {
-  const requestPath = '/api/foot/leagues'; // Endpoint pour les ligues
-  console.log(`[Service] Appel getAvailableLeagues vers ${requestPath}`);
+    const requestPath = '/api/foot/leagues';
+    console.log(`[Service] Appel getAvailableLeagues vers ${requestPath}`);
+    try {
+        const response = await apiClient.get<LeaguesApiResponse>(requestPath);
+        console.log(`[Service] ${response.data?.results ?? 'N/A'} ligues brutes reçues.`);
+
+        if (response.data && Array.isArray(response.data.response)) {
+            const leagues = response.data.response.map(item => {
+                const currentSeason = item.seasons?.find(s => s.current === true) ?? item.seasons?.[item.seasons.length - 1];
+                return { ...item.league, country: item.country, season: currentSeason };
+            }).filter(league => league.id && league.name);
+            console.log(`[Service] ${leagues.length} ligues valides après traitement.`);
+            return leagues;
+        } else {
+            console.warn('[Service] Réponse API pour /leagues inattendue.', response.data);
+            if (response.data?.errors && (Array.isArray(response.data.errors) || typeof response.data.errors === 'object')) { console.error('  Erreurs API:', response.data.errors); }
+            if (response.data?.message) { console.error('  Message API:', response.data.message); }
+            return [];
+        }
+    } catch (error) {
+        console.error(`[Service] ERREUR lors de la récupération des ligues via ${requestPath}:`, error);
+        if (axios.isAxiosError(error)) {
+             const axiosError = error as AxiosError;
+             console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A'}`);
+             const apiErrorData = axiosError.response?.data as any;
+            // --- >>> Correction Syntaxe ESLint <<< ---
+            if (apiErrorData && typeof apiErrorData.message === 'string') {
+                 console.error(`  Message API: ${apiErrorData.message}`);
+                 if (apiErrorData.errorCode) { console.error(`  Code d'erreur API: ${apiErrorData.errorCode}`); }
+                 else if (apiErrorData.errors && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) { console.error('  Erreurs API:', apiErrorData.errors); }
+             } else if (apiErrorData && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) {
+                 console.error('  Erreurs API:', apiErrorData.errors);
+            } else if (axiosError.message) {
+                 console.error(`  Message Axios: ${axiosError.message}`);
+            }
+            // --- >>> FIN CORRECTION <<< ---
+             if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { console.error("  >>> PISTE AUTH: Vérif clé REACT_APP_API_SPORTS_KEY sur Vercel."); }
+             else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) { console.error(`  >>> PISTE: Limites du plan API (${axiosError.response?.status}). Vérifiez compte/plan.`); }
+             else if (!axiosError.response) { console.error("  >>> PISTE: Pas de réponse reçue. Problème réseau/Rewrites Vercel."); }
+        } else { console.error('  Erreur inattendue (non-Axios):', error); }
+        // Retourner un tableau vide pour ne pas bloquer l'UI du filtre
+        console.warn("[Service] Retour d'un tableau vide pour getAvailableLeagues suite à une erreur.");
+        return [];
+    }
+};
+
+/**
+ * Récupère les matchs pour une date/ligue.
+ */
+export const getMatchesByDate = async ( date: string, leagueId?: number | null, seasonYear?: number | null ): Promise<MatchData[]> => {
+  const requestPath = `/api/foot/fixtures`;
+  const params: Record<string, any> = { date: date };
+  if (leagueId && seasonYear) {
+      params.league = leagueId;
+      params.season = seasonYear;
+      console.log(`[Service] getMatchesByDate pour date: ${date}, league: ${leagueId}, season: ${seasonYear}`);
+  } else {
+      console.log(`[Service] getMatchesByDate pour date: ${date} (toutes ligues autorisées)`);
+  }
+  console.log(`  Chemin requête: ${requestPath}, Params: ${JSON.stringify(params)}`);
+
   try {
-      // Appel API vers l'endpoint /leagues
-      const response = await apiClient.get<LeaguesApiResponse>(requestPath/*, { params: { current: 'true' } }*/); // L'appel réel
+    const response = await apiClient.get<FixturesApiResponse>(requestPath, { params });
+    console.log('--- Réponse API-Football /fixtures Reçue ---');
+    console.log(`  Statut HTTP: ${response.status}`);
+    console.log(`  Résultats API: ${response.data?.results ?? 'N/A'}`);
+    if (response.data?.paging) { console.log(`  Pagination API: Page ${response.data.paging.current}/${response.data.paging.total}`); }
+    console.log(`  Nombre de matchs dans response.data.response: ${Array.isArray(response.data?.response) ? response.data.response.length : 'N/A'}`);
+    console.log('--- Fin Réponse API-Football /fixtures ---');
 
-      if (response.data && Array.isArray(response.data.response)) {
-          console.log(`[Service] ${response.data.response.length} ligues reçues.`);
-          // Transformer la réponse pour avoir une structure LeagueInfo simple
-          const leagues = response.data.response.map(item => {
-              const currentSeason = item.seasons?.find(s => s.current === true) ?? item.seasons?.[item.seasons.length - 1];
-              return {
-                  ...item.league,
-                  country: item.country,
-                  season: currentSeason
-              };
-          }).filter(league => league.id && league.name); // Filtrer celles sans ID ou nom
+    if (response.data && Array.isArray(response.data.response)) {
+      console.log(`  Traitement réussi: ${response.data.response.length} matchs retournés.`);
+       if (response.data.paging && response.data.paging.current < response.data.paging.total) {
+           console.warn(`  AVERTISSEMENT: Pagination détectée (Page ${response.data.paging.current}/${response.data.paging.total}). Seule la première page est traitée.`);
+       }
+      return response.data.response;
+    } else {
+      console.warn(`  Traitement AVERTISSEMENT: Réponse API-Football /fixtures inattendue. Clé 'response' manquante ou non-tableau.`);
+      if(response.data?.errors && (Array.isArray(response.data.errors) || typeof response.data.errors === 'object')) { console.error('  Erreurs API:', response.data.errors); }
+      if(response.data?.message) { console.error('  Message API:', response.data.message); }
+      return [];
+    }
+  } catch (error) {
+    console.error(`ERREUR CATCHÉE dans getMatchesByDate (date: ${date}, league: ${leagueId}, season: ${seasonYear}):`);
+    if (axios.isAxiosError(error)) {
+         const axiosError = error as AxiosError;
+         console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A'}`);
+         const apiErrorData = axiosError.response?.data as any;
+        // --- >>> Correction Syntaxe ESLint <<< ---
+        if (apiErrorData && typeof apiErrorData.message === 'string') {
+             console.error(`  Message API: ${apiErrorData.message}`);
+             if (apiErrorData.errorCode) { console.error(`  Code d'erreur API: ${apiErrorData.errorCode}`); }
+             else if (apiErrorData.errors && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) { console.error('  Erreurs API:', apiErrorData.errors); }
+         } else if (apiErrorData && (Array.isArray(apiErrorData.errors) || typeof apiErrorData.errors === 'object')) {
+             console.error('  Erreurs API:', apiErrorData.errors);
+        } else if (axiosError.message) {
+             console.error(`  Message Axios: ${axiosError.message}`);
+        }
+        // --- >>> FIN CORRECTION <<< ---
+         if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { console.error("  >>> PISTE AUTH: Vérif clé REACT_APP_API_SPORTS_KEY sur Vercel."); }
+         else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) { console.error(`  >>> PISTE: Limites du plan API (${axiosError.response?.status}). Vérifiez compte/plan.`); }
+         else if (!axiosError.response) { console.error("  >>> PISTE: Pas de réponse reçue. Problème réseau/Rewrites Vercel."); }
+    } else { console.error('  Erreur inattendue (non-Axios):', error); }
+    throw error; // Relancer pour le composant
+  }
+};
 
-          console.log(`[Service] ${leagues.length} ligues valides après traitement.`);
-          return leagues; // <<<--- INSTRUCTION RETURN NÉCESSAIRE
 
-      } else {
-          console.warn('[Service] Réponse API pour /leagues inattendue.', response.data);
-           if(response.data?.errors && response.data.errors.length > 0) { console.error('  Erreurs API:', response.data.errors); }
-           if(response.data?.message) { console.error('  Message API:', response.data.message); }
-          return []; // <<<--- INSTRUCTION RETURN NÉCESSAIRE (tableau vide)
-      }
-    } catch (error) { // Début du bloc catch
-      console.error(`[Service] ERREUR lors de la récupération des ligues via ${requestPath}:`, error);
-
-      // Vérifier si c'est une erreur Axios
-      if (axios.isAxiosError(error)) {
-          // DANS LE BLOC catch -> if (axios.isAxiosError(error)) CONCERNÉ (vers ligne 192)
-
-          const axiosError = error as AxiosError;
-          console.error(`  Erreur Axios détectée.`);
-          console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A (Erreur Réseau ou CORS?)'}`);
-          const apiErrorData = axiosError.response?.data as any;
-
-          // --- >>> APPLIQUER LA MÊME CORRECTION ICI <<< ---
-          if (apiErrorData && typeof apiErrorData.message === 'string') {
-              console.error(`  Message API: ${apiErrorData.message}`);
-               if (apiErrorData.errorCode) { // Log code si dispo avec message
-                  console.error(`  Code d'erreur API: ${apiErrorData.errorCode}`);
-               }
-          } else if (apiErrorData && Array.isArray(apiErrorData.errors)) {
-              console.error('  Erreurs API:', apiErrorData.errors);
-          } else if (axiosError.message) { // Sinon, log message Axios général
-              console.error(`  Message Axios: ${axiosError.message}`);
-          }
-          // --- >>> FIN CORRECTION <<< ---
-
-          // Log spécifiques pour erreurs communes (doivent déjà être là)
-          if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { /* ... */ }
-          else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) { /* ... */ }
-          else if (!axiosError.response) { /* ... */ }
-
-      } else {
-          // Gérer les erreurs qui ne sont PAS des erreurs Axios
-          console.error('  Erreur inattendue (non-Axios):', error);
-      }
-    // ... reste du catch de cette fonction ...
-    throw error; // Assurez-vous que l'erreur est relancée à la fin du catch
-
-// La fonction getMatchesByDate reste ici aussi
-export const getMatchesByDate = ... // (INCHANGÉE)
-
-// La fonction getCountries reste ici aussi
-export const getCountries = ... // (INCHANGÉE)
-
-// --- TODO: Adapter les autres fonctions ---
+// --- TODO: Adapter getTeamHistoryAndStats ---
+// export const getTeamHistoryAndStats = async (teamId: number): Promise<MatchData[]> => { ... }
