@@ -1,5 +1,3 @@
-// src/components/matches/MatchList.tsx
-
 import React, { useState, useEffect, useCallback } from 'react'; // Ajout de useCallback
 import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { format, parseISO } from 'date-fns';
