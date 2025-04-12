@@ -2,7 +2,7 @@
 
 // --- AJOUTS/VÉRIFICATIONS IMPORTS ---
 import React, { useState } from 'react'; // Ajout de useState
-import { Card, CardContent, Typography, Box, Chip, Avatar, Collapse, Button, CircularProgress, Stack, Divider } from '@mui/material'; // Ajout de Collapse, Button, CircularProgress, Stack, Divider
+import { Card, CardContent, Typography, Box, Chip, Avatar, Collapse, Button, CircularProgress, Stack, Divider, Alert } from '@mui/material'; // Ajout de Collapse, Button, CircularProgress, Stack, Divider
 import { format, parseISO } from 'date-fns';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // Icône pour déplier
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'; // Icône pour replier
