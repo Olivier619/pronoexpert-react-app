@@ -150,12 +150,14 @@ export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => {
 
       // Vérifier si c'est une erreur Axios
       if (axios.isAxiosError(error)) {
+          // DANS LE BLOC catch -> if (axios.isAxiosError(error)) CONCERNÉ (vers ligne 192)
+
           const axiosError = error as AxiosError;
           console.error(`  Erreur Axios détectée.`);
           console.error(`  Status HTTP: ${axiosError.response?.status || 'N/A (Erreur Réseau ou CORS?)'}`);
           const apiErrorData = axiosError.response?.data as any;
 
-          // Essayer de logger le message/erreurs spécifiques de l'API
+          // --- >>> APPLIQUER LA MÊME CORRECTION ICI <<< ---
           if (apiErrorData && typeof apiErrorData.message === 'string') {
               console.error(`  Message API: ${apiErrorData.message}`);
                if (apiErrorData.errorCode) { // Log code si dispo avec message
@@ -166,27 +168,19 @@ export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => {
           } else if (axiosError.message) { // Sinon, log message Axios général
               console.error(`  Message Axios: ${axiosError.message}`);
           }
+          // --- >>> FIN CORRECTION <<< ---
 
-          // Ajouter ici les logs spécifiques pour les codes HTTP
-          if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) {
-             console.error("  >>> PISTE AUTH: Vérifiez REACT_APP_API_SPORTS_KEY sur Vercel et l'en-tête x-apisports-key.");
-          } else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) {
-             console.error(`  >>> PISTE: Limites du plan API (${axiosError.response?.status}). Vérifiez votre compte/plan sur api-sports.io.`);
-          } else if (!axiosError.response) {
-             console.error("  >>> PISTE: Pas de réponse reçue. Problème réseau, mauvaise config Rewrites Vercel, ou problème CORS si rewrites échouent.");
-           }
+          // Log spécifiques pour erreurs communes (doivent déjà être là)
+          if (axiosError.response?.status === 401 || axiosError.response?.status === 499 ) { /* ... */ }
+          else if (axiosError.response?.status === 403 || axiosError.response?.status === 429) { /* ... */ }
+          else if (!axiosError.response) { /* ... */ }
 
       } else {
           // Gérer les erreurs qui ne sont PAS des erreurs Axios
           console.error('  Erreur inattendue (non-Axios):', error);
       }
-
-      // En cas d'erreur (Axios ou autre), retourner un tableau vide pour cette fonction
-      console.warn("[Service] Retour d'un tableau vide pour getAvailableLeagues suite à une erreur.");
-      return []; // <<<--- Instruction return pour le bloc catch global
-
-  } // Fin du bloc catch
-}; // Fin de la fonction getAvailableLeagues
+    // ... reste du catch de cette fonction ...
+    throw error; // Assurez-vous que l'erreur est relancée à la fin du catch
 
 // La fonction getMatchesByDate reste ici aussi
 export const getMatchesByDate = ... // (INCHANGÉE)
