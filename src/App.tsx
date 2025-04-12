@@ -1,18 +1,21 @@
+// src/App.tsx
 import React from 'react';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import MainLayout from './components/common/MainLayout';
 import MatchList from './components/matches/MatchList';
-import theme from './theme'; // Importez votre thème
+import theme from './theme';
+import { AppProvider } from './context/AppContext'; // Importer le Provider
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      {/* CssBaseline applique des styles de base et normalise */}
       <CssBaseline />
-      <MainLayout>
-        {/* Le contenu principal est maintenant MatchList */}
-        <MatchList />
-      </MainLayout>
+      {/* Envelopper avec AppProvider */}
+      <AppProvider>
+        <MainLayout>
+          <MatchList />
+        </MainLayout>
+      </AppProvider>
     </ThemeProvider>
   );
 }
