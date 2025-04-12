@@ -114,9 +114,52 @@ export const getCountries = async (): Promise<Array<{ name: string; code: string
 
 
 // Fonction pour récupérer les ligues (INCHANGÉE)
-export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => { /* ... code existant ... */ };
+// Dans src/api/sportDataService.ts, remplacer le corps de getAvailableLeagues
 
-// Fonction pour récupérer les matchs (INCHANGÉE, mais ne sera pas appelée par MatchList dans ce test)
-export const getMatchesByDate = async ( date: string, leagueId?: number | null, seasonYear?: number | null ): Promise<MatchData[]> => { /* ... code existant ... */ };
+// Fonction pour récupérer les ligues
+export const getAvailableLeagues = async (): Promise<LeagueInfo[]> => {
+  const requestPath = '/api/foot/leagues'; // Endpoint pour les ligues
+  console.log(`[Service] Appel getAvailableLeagues vers ${requestPath}`);
+  try {
+      // Appel API vers l'endpoint /leagues
+      const response = await apiClient.get<LeaguesApiResponse>(requestPath/*, { params: { current: 'true' } }*/); // L'appel réel
 
-// --- TODO: Adapter getTeamHistoryAndStats ---
+      if (response.data && Array.isArray(response.data.response)) {
+          console.log(`[Service] ${response.data.response.length} ligues reçues.`);
+          // Transformer la réponse pour avoir une structure LeagueInfo simple
+          const leagues = response.data.response.map(item => {
+              const currentSeason = item.seasons?.find(s => s.current === true) ?? item.seasons?.[item.seasons.length - 1];
+              return {
+                  ...item.league,
+                  country: item.country,
+                  season: currentSeason
+              };
+          }).filter(league => league.id && league.name); // Filtrer celles sans ID ou nom
+
+          console.log(`[Service] ${leagues.length} ligues valides après traitement.`);
+          return leagues; // <<<--- INSTRUCTION RETURN NÉCESSAIRE
+
+      } else {
+          console.warn('[Service] Réponse API pour /leagues inattendue.', response.data);
+           if(response.data?.errors && response.data.errors.length > 0) { console.error('  Erreurs API:', response.data.errors); }
+           if(response.data?.message) { console.error('  Message API:', response.data.message); }
+          return []; // <<<--- INSTRUCTION RETURN NÉCESSAIRE (tableau vide)
+      }
+  } catch (error) {
+      console.error(`[Service] ERREUR lors de la récupération des ligues via ${requestPath}:`, error);
+       if (axios.isAxiosError(error)) {
+           // ... (log détaillé de l'erreur axios) ...
+       } else { console.error('  Erreur inattendue:', error); }
+      // En cas d'erreur, on peut choisir de relancer ou retourner un tableau vide
+      // throw error; // Option 1: Propager l'erreur
+      return []; // Option 2: Retourner un tableau vide pour ne pas bloquer l'UI du filtre
+  }
+}; // Fin de la fonction getAvailableLeagues
+
+// La fonction getMatchesByDate reste ici aussi
+export const getMatchesByDate = ... // (INCHANGÉE)
+
+// La fonction getCountries reste ici aussi
+export const getCountries = ... // (INCHANGÉE)
+
+// --- TODO: Adapter les autres fonctions ---
