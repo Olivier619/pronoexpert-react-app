@@ -1,32 +1,42 @@
 // src/components/common/MainLayout.tsx
 import React, { ReactNode } from 'react';
-// --- >>> Vérifier que Tab est bien dans cet import <<< ---
 import {
-    AppBar, Toolbar, Typography, Container, Box, Tabs, Tab, // 'Tab' est nécessaire ici
-    Select, MenuItem, FormControl, InputLabel, CircularProgress, SelectChangeEvent
+    AppBar, Toolbar, Typography, Container, Box, Tabs, Tab,
+    // Retirer imports liés au filtre de ligue si CompetitionFilter gère tout
 } from '@mui/material';
-// --- >>> Fin Vérification <<<---
+// Retirer imports date-fns si la date est calculée dans le contexte
+// import { format, addDays, subDays } from 'date-fns'; // <--- A retirer
+// Importation du contexte
 import { useAppContext, PeriodType } from '../../context/AppContext';
+// Importation du composant CompetitionFilter
+import CompetitionFilter from '../competitions/CompetitionFilter';
+
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  // Récupérer seulement ce dont MainLayout a besoin du contexte
+  // selectedDate est maintenant une valeur calculée dans le contexte, pas besoin du setter ici
   const {
-      selectedPeriod, setSelectedPeriod,
-      availableLeagues, leaguesLoading, selectedLeagueId, setSelectedLeagueId
+      selectedPeriod,
+      setSelectedPeriod,
+      // selectedDate // Vous pouvez le garder pour l'afficher si vous voulez, mais pas pour le modifier
   } = useAppContext();
 
+
+  // Gérer le changement d'onglet (Période)
   const handleTabChange = (event: React.SyntheticEvent, newValue: PeriodType) => {
+    console.log(`[MainLayout] Onglet de période changé: ${newValue}`);
+    // Appeler SEULEMENT setSelectedPeriod du contexte
     setSelectedPeriod(newValue);
+    // La date sera automatiquement recalculée et mise à jour dans le contexte par le useMemo
+    // --- Supprimer : Logique de calcul de date et setSelectedDate(newDate); ---
   };
 
-  const handleLeagueChange = (event: SelectChangeEvent<number | string>) => {
-      const value = event.target.value;
-      const leagueId = value === "all" ? null : Number(value);
-      setSelectedLeagueId(leagueId);
-  };
+  // handleLeagueChange est géré dans CompetitionFilter
+
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -35,42 +45,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             PronoExpert
           </Typography>
-            {/* Filtre Compétition */}
-            <FormControl sx={{ m: 1, minWidth: 200, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1 }} size="small">
-              <InputLabel id="league-select-label" sx={{ color: 'white' }}>Compétition</InputLabel>
-              <Select
-                labelId="league-select-label"
-                id="league-select"
-                value={selectedLeagueId === null ? 'all' : selectedLeagueId}
-                label="Compétition"
-                onChange={handleLeagueChange}
-                disabled={leaguesLoading}
-                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.3)' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.5)' }, '.MuiSvgIcon-root': { color: 'white' } }}
-                MenuProps={{ PaperProps: { sx: { maxHeight: 400 } } }}
-              >
-                <MenuItem value="all">
-                  <em>Toutes les compétitions</em>
-                </MenuItem>
-                {leaguesLoading ? (
-                  <MenuItem disabled value="loading">
-                    <CircularProgress size={20} sx={{ mr: 1 }}/> Chargement...
-                  </MenuItem>
-                ) : (
-                  availableLeagues // La liste est déjà triée dans le contexte maintenant
-                    .map((league) => (
-                      <MenuItem key={league.id} value={league.id}>
-                        <img src={league.logo} alt="" width="16" height="16" style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                        {league.name} ({league.country?.name ?? 'Monde'})
-                      </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
+
+          {/* Intégration du composant CompetitionFilter */}
+          <CompetitionFilter />
+
         </Toolbar>
-        {/* Barre d'onglets */}
+        {/* Barre d'onglets pour les périodes */}
+        {/* Value et onChange utilisent les états et handlers de MainLayout */}
         <Tabs
-          value={selectedPeriod}
-          onChange={handleTabChange}
+          value={selectedPeriod} // Utilise la période du contexte
+          onChange={handleTabChange} // Appelle le handler qui met à jour la période
           indicatorColor="secondary"
           textColor="inherit"
           variant="scrollable"
@@ -78,18 +62,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           aria-label="Navigation par période"
           sx={{ bgcolor: 'primary.main' }}
         >
-          {/* --- >>> Utilisation de Tab ici <<< --- */}
+          {/* Les valeurs doivent correspondre aux PeriodType définis dans le contexte */}
           <Tab label="Aujourd'hui" value="today" />
           <Tab label="Demain" value="tomorrow" />
-          <Tab label="Derniers Matchs" value="yesterday" />
-          {/* --- >>> Fin Utilisation <<< --- */}
+          <Tab label="Derniers Matchs" value="yesterday" /> {/* Vérifiez la valeur si 'yesterday' ne convient pas */}
         </Tabs>
       </AppBar>
 
+      {/* Contenu principal de la page (la liste des matchs, etc.) */}
       <Container component="main" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
-        {children}
+        {children} {/* Affiche le contenu passé en props (ex: MatchList) */}
       </Container>
 
+      {/* Pied de page */}
       <Box component="footer" sx={{ py: 2, px: 2, mt: 'auto', backgroundColor: (theme) => theme.palette.mode === 'light' ? theme.palette.grey[200] : theme.palette.grey[800], }} >
           <Container maxWidth="sm">
             <Typography variant="body2" color="text.secondary" align="center">
