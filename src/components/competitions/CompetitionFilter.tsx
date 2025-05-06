@@ -1,10 +1,11 @@
-// src/components/competitions/CompetitionFilter.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Box, Typography, CircularProgress,
-    // Remplacer Select, MenuItem, SelectChangeEvent par Autocomplete, TextField
-    Autocomplete, TextField, FormControl // Garder FormControl et InputLabel si besoin pour le wrapper, mais TextField a déjà un label
+    TextField, FormControl // Garder FormControl et InputLabel si besoin pour le wrapper, mais TextField a déjà un label
 } from '@mui/material';
+// Importez createFilterOptions spécifiquement depuis @mui/material/Autocomplete
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
+
 import { useAppContext } from '../../context/AppContext';
 import { LeagueInfo } from '../../api/sportDataService';
 import { getRecentLeagueIds, addRecentLeagueId } from '../../utils/localStorage';
@@ -17,7 +18,7 @@ const ALL_LEAGUES_OPTION: LeagueInfo = {
     country: { name: "", code: null, flag: null }, // Pays vide ou null
 };
 
-// Helper pour trier les ligues
+// Helper pour trier les ligues (inchangé)
 const sortLeaguesByRecent = (leagues: LeagueInfo[], recentIds: number[]): LeagueInfo[] => {
     console.log("[sortLeaguesByRecent] Début tri. recentIds:", recentIds);
     console.log("[sortLeaguesByRecent] Nombre total de ligues à trier:", leagues.length);
@@ -51,6 +52,28 @@ const sortLeaguesByRecent = (leagues: LeagueInfo[], recentIds: number[]): League
     return finalSortedList;
 };
 
+// --- Définir la fonction de filtrage personnalisée ---
+// Cette fonction sera utilisée par l'Autocomplete pour déterminer si une option correspond à l'input de l'utilisateur.
+// Elle recherche dans une chaîne qui combine le nom de la ligue et le nom du pays.
+const filterOptions = createFilterOptions({
+  // `stringify` est la fonction qui génère la chaîne de texte à rechercher pour chaque option.
+  stringify: (option: LeagueInfo) => {
+      // Pour l'option "Toutes les compétitions", rechercher uniquement sur son nom.
+      if (option.id === (ALL_LEAGUES_OPTION.id as any)) {
+          return option.name;
+      }
+      // Pour les vraies ligues, combiner le nom de la ligue et le nom du pays.
+      // Utiliser des chaînes vides si country ou country.name sont null/undefined.
+      return `${option.name} ${option.country?.name ?? ''}`;
+  },
+  matchFrom: 'any', // Permet de trouver une correspondance n'importe où dans la chaîne `stringify` (pas seulement au début).
+  // Ajoutez d'autres options de `createFilterOptions` ici si nécessaire, par exemple:
+  // limit: 10, // Limiter le nombre d'options affichées
+  // ignoreCase: true, // Ignorer la casse (c'est le défaut, mais peut être explicité)
+  // trim: true, // Supprimer les espaces blancs au début et à la fin (c'est le défaut)
+});
+// --- FIN Définition de la fonction de filtrage ---
+
 
 const CompetitionFilter: React.FC = () => {
     const {
@@ -61,17 +84,16 @@ const CompetitionFilter: React.FC = () => {
         setSelectedLeagueId // Pour mettre à jour l'ID dans le contexte
     } = useAppContext();
 
-    // État local pour stocker la liste des IDs de ligues récemment vues
+    // État local pour stocker la liste des IDs de ligues récemment vues (inchangé)
     const [recentLeagueIds, setRecentLeagueIds] = useState<number[]>([]);
 
-    // État local pour l'input text de l'Autocomplete
+    // État local pour l'input text de l'Autocomplete (inchangé)
     const [inputValue, setInputValue] = useState('');
-    // État local pour l'objet Ligue sélectionné dans l'Autocomplete
-    // Initialisé à l'option "Toutes les compétitions" ou à la ligue actuellement sélectionnée par ID
+    // État local pour l'objet Ligue sélectionné dans l'Autocomplete (inchangé)
     const [selectedLeagueObject, setSelectedLeagueObject] = useState<LeagueInfo | null>(ALL_LEAGUES_OPTION);
 
 
-    // Charger la liste des IDs récemment vues depuis localStorage au montage
+    // Charger la liste des IDs récemment vues depuis localStorage au montage (inchangé)
     useEffect(() => {
         console.log("[CompetitionFilter] useEffect: Chargement initial des IDs récents depuis localStorage.");
         const recent = getRecentLeagueIds();
@@ -79,8 +101,7 @@ const CompetitionFilter: React.FC = () => {
         setRecentLeagueIds(recent);
     }, []);
 
-    // Synchroniser l'état local selectedLeagueObject avec selectedLeagueId du contexte
-    // quand selectedLeagueId change (ex: au chargement initial si localStorage a un ID, ou si un autre composant change l'ID)
+    // Synchroniser l'état local selectedLeagueObject avec selectedLeagueId du contexte (inchangé)
     useEffect(() => {
         console.log("[CompetitionFilter] useEffect: Synchronisation avec selectedLeagueId du contexte:", selectedLeagueId);
         if (selectedLeagueId === null) {
@@ -101,7 +122,7 @@ const CompetitionFilter: React.FC = () => {
     }, [selectedLeagueId, availableLeagues]); // Dépend du contexte ID et des ligues disponibles
 
 
-    // Utiliser useMemo pour calculer la liste des ligues triées pour l'affichage dans le dropdown.
+    // Utiliser useMemo pour calculer la liste des ligues triées pour l'affichage dans le dropdown. (inchangé)
     const sortedLeagues = useMemo(() => {
          console.log("[CompetitionFilter] useMemo déclenché: Re-calcul du tri des ligues.");
          if (availableLeagues.length === 0) {
@@ -115,15 +136,14 @@ const CompetitionFilter: React.FC = () => {
     }, [availableLeagues, recentLeagueIds]); // Dépend de availableLeagues et de l'état local recentLeagueIds
 
 
-    // Liste complète des options pour l'Autocomplete : "Toutes" + ligues triées
-    // Ce useMemo se recalcule si sortedLeagues change
+    // Liste complète des options pour l'Autocomplete : "Toutes" + ligues triées (inchangé)
     const autocompleteOptions = useMemo(() => {
         // Inclure l'option "Toutes les compétitions" au début
         return [ALL_LEAGUES_OPTION, ...sortedLeagues];
     }, [sortedLeagues]); // Dépend de la liste triée
 
 
-    // Gérer la sélection d'une option dans l'Autocomplete
+    // Gérer la sélection d'une option dans l'Autocomplete (inchangé)
     const handleAutocompleteChange = (event: any, newValue: LeagueInfo | null) => {
         console.log("[CompetitionFilter] handleAutocompleteChange: Nouvelle valeur sélectionnée:", newValue);
 
@@ -156,7 +176,7 @@ const CompetitionFilter: React.FC = () => {
          // Note: L'inputValue est géré automatiquement par l'Autocomplete quand une option est sélectionnée
     };
 
-    // Gérer le changement de l'input text (ce que l'utilisateur tape)
+    // Gérer le changement de l'input text (ce que l'utilisateur tape) (inchangé)
     const handleInputChange = (event: any, newInputValue: string) => {
         console.log("[CompetitionFilter] handleInputChange: Nouvel input text:", newInputValue);
         setInputValue(newInputValue);
@@ -167,7 +187,7 @@ const CompetitionFilter: React.FC = () => {
     };
 
 
-    // Rendu conditionnel (chargement, erreur, ou Autocomplete)
+    // Rendu conditionnel (chargement, erreur, ou Autocomplete) (inchangé)
     if (leaguesLoading) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 200, height: 40, justifyContent: 'center' }}>
@@ -185,7 +205,7 @@ const CompetitionFilter: React.FC = () => {
          );
     }
 
-    // Rendre l'Autocomplete
+    // Rendre l'Autocomplete avec la fonction de filtrage
     return (
         // MUI Autocomplete peut être directement stylisé ou enveloppé dans FormControl si vous avez besoin de Label/HelperText standard
          <Autocomplete
@@ -194,11 +214,14 @@ const CompetitionFilter: React.FC = () => {
              inputValue={inputValue} // Le texte actuellement dans l'input
              onInputChange={handleInputChange} // Gère la MODIFICATION du texte dans l'input
              options={autocompleteOptions} // La liste des options disponibles (incluant "Toutes")
-             getOptionLabel={(option) => option.name} // Comment afficher chaque option (le nom de la ligue)
-             isOptionEqualToValue={(option, value) => option.id === value?.id} // Comment déterminer si deux options sont "égales" (par leur ID)
-             sx={{ m: 1, minWidth: 200, '& .MuiOutlinedInput-root': { backgroundColor: 'rgba(255,255,255,0.15)', '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' }, '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' }, '&.Mui-focused fieldset': { borderColor: 'white' }, '& input': { color: 'white' }, '& .MuiSvgIcon-root': { color: 'white' } } }} // Styles MUI
+             // --- PASSEZ LA FONCTION DE FILTRAGE PERSONNALISÉE ICI ---
+             filterOptions={filterOptions}
+             // --- FIN DU CHANGEMENT ---
+             getOptionLabel={(option) => option.name} // Comment afficher chaque option (le nom de la ligue) - INCHANGÉ
+             isOptionEqualToValue={(option, value) => option.id === value?.id} // Comment déterminer si deux options sont "égales" (par leur ID) - INCHANGÉ
+             sx={{ m: 1, minWidth: 200, '& .MuiOutlinedInput-root': { backgroundColor: 'rgba(255,255,255,0.15)', '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' }, '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' }, '&.Mui-focused fieldset': { borderColor: 'white' }, '& input': { color: 'white' }, '& .MuiSvgIcon-root': { color: 'white' } } }} // Styles MUI - INCHANGÉ
              size="small"
-             renderInput={(params) => ( // Comment afficher l'input text de l'Autocomplete
+             renderInput={(params) => ( // Comment afficher l'input text de l'Autocomplete - INCHANGÉ
                  <TextField
                      {...params}
                      label="Compétition" // Label pour l'input
@@ -207,12 +230,13 @@ const CompetitionFilter: React.FC = () => {
                  />
              )}
              // Optionnel: Ajouter une icône de loupe si vous voulez (peut nécessiter customization)
-             // Optionnel: Ajouter une option renderOption pour afficher le logo/pays dans la liste déroulante
+             // Optionnel: Ajouter une option renderOption pour afficher le logo/pays dans la liste déroulante - INCHANGÉ
              renderOption={(props, option) => (
                  <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
                      {option.logo && option.logo !== "" && option.id !== (ALL_LEAGUES_OPTION.id as any) ? (
                          <img loading="lazy" width="20" src={option.logo} alt={option.name} />
                      ) : null}
+                     {/* Afficher le nom de la ligue et le nom du pays (si présent et pas l'option "Toutes") */}
                      {option.name} {option.country?.name && option.country.name !== "" && option.id !== (ALL_LEAGUES_OPTION.id as any) ? ` (${option.country.name})` : ''}
                  </Box>
              )}
